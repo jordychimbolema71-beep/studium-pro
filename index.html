@@ -461,6 +461,10 @@
                 flex-direction: column;
                 gap: 1rem;
             }
+            .user-menu:hover .user-dropdown {
+    display: block;
+}
+
         }
     </style>
 </head>
@@ -481,10 +485,26 @@
                     <li><a href="#">Noticias</a></li>
                 </ul>
             </nav>
-            <div class="auth-buttons">
-                <button class="btn btn-outline">Iniciar Sesión</button>
-                <button class="btn btn-primary">Registrarse</button>
-            </div>
+           <div class="auth-buttons" id="auth-buttons">
+  <button class="btn btn-outline" id="btn-login">Iniciar Sesión</button>
+  <button class="btn btn-primary">Registrarse</button>
+</div>
+
+<div id="user-profile" class="user-menu" style="display: none; position: relative;">
+  <button id="user-menu-toggle" style="background: none; border: none; cursor: pointer;">
+    <img id="user-avatar" src="" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+  </button>
+  <div id="user-dropdown" class="user-dropdown" style="display: none; position: absolute; right: 0; top: 50px; background: white; border: 1px solid #ddd; box-shadow: var(--shadow); border-radius: var(--border-radius); min-width: 200px; z-index: 100;">
+    <div style="padding: 1rem;">
+      <strong id="user-name"></strong><br>
+      <small id="user-email"></small>
+    </div>
+    <hr style="margin: 0;">
+    <button id="btn-logout" style="width: 100%; padding: 0.8rem 1rem; border: none; background: none; cursor: pointer; text-align: left;">Cerrar sesión</button>
+  </div>
+</div>
+
+
         </div>
     </header>
    <section id="login-section" style="padding: 3rem 1rem; text-align: center;">
@@ -701,105 +721,145 @@
         </div>
     </footer>
 
-    <script>
-        // Funcionalidad para las pestañas
-        document.addEventListener('DOMContentLoaded', function() {
-            const tabs = document.querySelectorAll('.tab');
-            const tabContents = document.querySelectorAll('.tab-content');
-            
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    // Remover clase active de todas las pestañas
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tabContents.forEach(c => c.classList.remove('active'));
-                    
-                    // Agregar clase active a la pestaña clickeada
-                    tab.classList.add('active');
-                    
-                    // Mostrar el contenido correspondiente
-                    const tabId = tab.getAttribute('data-tab');
-                    document.getElementById(${tabId}-content).classList.add('active');
-                });
-            });
-            
-            // Funcionalidad para los botones
-            const buttons = document.querySelectorAll('.btn');
-            buttons.forEach(button => {
-                button.addEventListener('click', function() {
-                    this.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        this.style.transform = '';
-                    }, 200);
-                });
-            });
-            
-            // Efecto de escritura para el hero
-            const heroText = document.querySelector('.hero h1');
-            const originalText = heroText.textContent;
-            heroText.textContent = '';
-            
-            let i = 0;
-            function typeWriter() {
-                if (i < originalText.length) {
-                    heroText.textContent += originalText.charAt(i);
-                    i++;
-                    setTimeout(typeWriter, 50);
-                }
-            }
-            
-            setTimeout(typeWriter, 500);
-        });
-    </script>
-    <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
 
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(`${tabId}-content`).classList.add('active');
+      });
+    });
+
+    // Botones animados
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+      button.addEventListener('click', function () {
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 200);
+      });
+    });
+
+    // Efecto de escritura para el título principal
+    const heroText = document.querySelector('.hero h1');
+    const originalText = heroText.textContent;
+    heroText.textContent = '';
+
+    let i = 0;
+    function typeWriter() {
+      if (i < originalText.length) {
+        heroText.textContent += originalText.charAt(i);
+        i++;
+        setTimeout(typeWriter, 50);
+      }
+    }
+
+    setTimeout(typeWriter, 500);
+  });
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+
+  // Tu configuración de Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyCvcty4LZMMfxI7Ze697KbHiW_KC8jqGhg",
     authDomain: "studiumpro-23b71.firebaseapp.com",
     projectId: "studiumpro-23b71",
-    storageBucket: "studiumpro-23b71.firebaseapp.com",
+    storageBucket: "studiumpro-23b71.appspot.com",
     messagingSenderId: "330053359753",
     appId: "1:330053359753:web:f4fba35f48bdee1c22ce58"
   };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  auth.languageCode = 'es'; // Forzar idioma español
+  auth.languageCode = 'es';
 
-  document.getElementById('login-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const errorText = document.getElementById('login-error');
+  // Referencias al DOM
+  const authButtons = document.getElementById('auth-buttons');
+  const userProfile = document.getElementById('user-profile');
+  const userEmailSpan = document.getElementById('user-email');
+  const logoutBtn = document.getElementById('btn-logout');
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        alert("¡Sesión iniciada como: " + user.email + "!");
-        // Aquí puedes redirigir a otra página si deseas
-      })
-      .catch((error) => {
-        let mensaje;
-        switch (error.code) {
-          case "auth/invalid-email":
-            mensaje = "Correo inválido.";
-            break;
-          case "auth/user-not-found":
-            mensaje = "Usuario no registrado.";
-            break;
-          case "auth/wrong-password":
-            mensaje = "Contraseña incorrecta.";
-            break;
-          default:
-            mensaje = "Error: " + error.message;
-        }
-        errorText.textContent = mensaje;
-      });
+  // Escuchar cambios en el estado de autenticación
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // Usuario logueado
+      authButtons.style.display = 'none';
+      userProfile.style.display = 'flex';
+      userEmailSpan.textContent = user.email;
+    } else {
+      // Usuario no logueado
+      authButtons.style.display = 'flex';
+      userProfile.style.display = 'none';
+      userEmailSpan.textContent = '';
+    }
   });
+
+  // Evento para cerrar sesión
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth)
+        .then(() => alert('Sesión cerrada correctamente.'))
+        .catch((error) => alert('Error al cerrar sesión: ' + error.message));
+    });
+  }
+
+  // Evento para formulario de inicio de sesión
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorText = document.getElementById('login-error');
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          alert("¡Sesión iniciada como: " + user.email + "!");
+          // Puedes redirigir o mostrar contenido aquí si quieres
+        })
+        .catch((error) => {
+          let mensaje;
+          switch (error.code) {
+            case "auth/invalid-email":
+              mensaje = "Correo inválido.";
+              break;
+            case "auth/user-not-found":
+              mensaje = "Usuario no registrado.";
+              break;
+            case "auth/wrong-password":
+              mensaje = "Contraseña incorrecta.";
+              break;
+            default:
+              mensaje = "Error: " + error.message;
+          }
+          if (errorText) {
+            errorText.textContent = mensaje;
+          } else {
+            alert(mensaje);
+          }
+        });
+    });
+  }
 </script>
 
 </body>
 </html>
+
 
 
