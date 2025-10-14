@@ -38,7 +38,7 @@ nav a:hover{color:var(--primary);}
 .hero h1{font-size:2.5rem;margin-bottom:1rem;}
 .hero p{font-size:1.2rem;opacity:.9;margin-bottom:2rem;}
 .hero-buttons{display:flex;justify-content:center;gap:1rem;}
-/* Modal Login */
+/* Modales */
 .modal{
   display:none;
   position:fixed;
@@ -74,7 +74,11 @@ nav a:hover{color:var(--primary);}
   font-size:1.5rem;
   cursor:pointer;
 }
-#login-error{color:red;text-align:center;margin-top:0.5rem;}
+.switch-text{text-align:center;margin-top:0.5rem;}
+.switch-text button{
+  background:none;border:none;color:var(--primary);cursor:pointer;font-weight:500;
+}
+#error-text,#register-error{color:red;text-align:center;margin-top:0.5rem;}
 footer{background:var(--dark);color:white;text-align:center;padding:1.5rem;}
 </style>
 </head>
@@ -93,7 +97,7 @@ footer{background:var(--dark);color:white;text-align:center;padding:1.5rem;}
     </nav>
     <div class="auth-buttons" id="auth-buttons">
       <button class="btn btn-outline" id="btn-login">Iniciar Sesión</button>
-      <button class="btn btn-primary">Registrarse</button>
+      <button class="btn btn-primary" id="btn-register">Registrarse</button>
     </div>
     <div id="user-profile" class="user-menu" style="display:none;">
       <button style="background:none;border:none;cursor:pointer;">
@@ -120,25 +124,62 @@ footer{background:var(--dark);color:white;text-align:center;padding:1.5rem;}
   </div>
 </section>
 
-
 <!-- Modal Login -->
 <div id="login-modal" class="modal">
   <div class="modal-content">
-    <button class="close" id="close-modal">&times;</button>
+    <button class="close" id="close-login">&times;</button>
     <h2>Iniciar Sesión</h2>
     <form id="login-form">
-      <input type="email" id="email" placeholder="Correo electrónico" required>
-      <input type="password" id="password" placeholder="Contraseña" required>
+      <input type="email" id="login-email" placeholder="Correo electrónico" required>
+      <input type="password" id="login-password" placeholder="Contraseña" required>
       <button type="submit" class="btn btn-primary" style="width:100%;">Entrar</button>
     </form>
-    <p id="login-error"></p>
+    <p id="error-text"></p>
+    <div class="switch-text">
+      ¿No tienes cuenta? <button id="go-register">Regístrate aquí</button>
+    </div>
   </div>
 </div>
 
+<!-- Modal Registro -->
+<div id="register-modal" class="modal">
+  <div class="modal-content">
+    <button class="close" id="close-register">&times;</button>
+    <h2>Crear cuenta</h2>
+    <form id="register-form">
+      <input type="text" id="register-name" placeholder="Nombre completo" required>
+      <input type="email" id="register-email" placeholder="Correo electrónico" required>
+      <input type="password" id="register-password" placeholder="Contraseña" required>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Registrarse</button>
+    </form>
+    <p id="register-error"></p>
+    <div class="switch-text">
+      ¿Ya tienes una cuenta? <button id="go-login">Inicia sesión</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Studium Pro. Todos los derechos reservados.</p>
+</footer>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  createUserWithEmailAndPassword, 
+  updateProfile 
+} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+import {
+  getFirestore,
+  setDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
 
+// Configuración Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCvcty4LZMMfxI7Ze697KbHiW_KC8jqGhg",
   authDomain: "studiumpro-23b71.firebaseapp.com",
@@ -148,67 +189,112 @@ const firebaseConfig = {
   appId: "1:330053359753:web:f4fba35f48bdee1c22ce58"
 };
 
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 auth.languageCode = 'es';
 
-// Referencias del DOM
+// Referencias DOM
 const authButtons = document.getElementById('auth-buttons');
 const userProfile = document.getElementById('user-profile');
 const userEmailSpan = document.getElementById('user-email');
+const userNameSpan = document.getElementById('user-name');
 const loginModal = document.getElementById('login-modal');
+const registerModal = document.getElementById('register-modal');
 const loginBtn = document.getElementById('btn-login');
-const closeModal = document.getElementById('close-modal');
+const registerBtn = document.getElementById('btn-register');
+const closeLogin = document.getElementById('close-login');
+const closeRegister = document.getElementById('close-register');
+const goRegister = document.getElementById('go-register');
+const goLogin = document.getElementById('go-login');
 const loginForm = document.getElementById('login-form');
-const errorText = document.getElementById('login-error');
+const registerForm = document.getElementById('register-form');
+const errorText = document.getElementById('error-text');
+const registerError = document.getElementById('register-error');
 const logoutBtn = document.getElementById('btn-logout');
 
-// Abrir / cerrar modal
-loginBtn.addEventListener('click', ()=> loginModal.style.display = 'flex');
-closeModal.addEventListener('click', ()=> loginModal.style.display = 'none');
-window.addEventListener('click', (e)=>{ if(e.target===loginModal) loginModal.style.display='none'; });
+// --- FUNCIONES ---
+function toggleModal(modal, show) {
+  modal.style.display = show ? 'flex' : 'none';
+}
+window.onclick = e => {
+  if (e.target === loginModal) toggleModal(loginModal, false);
+  if (e.target === registerModal) toggleModal(registerModal, false);
+};
 
-// Estado de usuario
+// --- EVENTOS ---
+loginBtn.onclick = () => toggleModal(loginModal, true);
+registerBtn.onclick = () => toggleModal(registerModal, true);
+closeLogin.onclick = () => toggleModal(loginModal, false);
+closeRegister.onclick = () => toggleModal(registerModal, false);
+goRegister.onclick = () => { toggleModal(loginModal, false); toggleModal(registerModal, true); };
+goLogin.onclick = () => { toggleModal(registerModal, false); toggleModal(loginModal, true); };
+
+// --- SESIÓN ---
 onAuthStateChanged(auth, (user)=>{
   if(user){
     authButtons.style.display='none';
     userProfile.style.display='flex';
     userEmailSpan.textContent=user.email;
-    loginModal.style.display='none';
+    userNameSpan.textContent=user.displayName || "Usuario";
+    toggleModal(loginModal,false);
+    toggleModal(registerModal,false);
   }else{
     authButtons.style.display='flex';
     userProfile.style.display='none';
   }
 });
 
-// Inicio de sesión
+// --- INICIAR SESIÓN ---
 loginForm.addEventListener('submit', e=>{
   e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
   signInWithEmailAndPassword(auth, email, password)
-  .then(userCredential=>{
+  .then(()=>{
     errorText.textContent='';
-    alert("¡Bienvenido, " + userCredential.user.email + "!");
-    loginModal.style.display='none';
+    toggleModal(loginModal,false);
   })
-  .catch(error=>{
+  .catch(err=>{
     let msg="Error al iniciar sesión.";
-    if(error.code==="auth/invalid-email") msg="Correo inválido.";
-    else if(error.code==="auth/user-not-found") msg="Usuario no encontrado.";
-    else if(error.code==="auth/wrong-password") msg="Contraseña incorrecta.";
+    if(err.code==="auth/invalid-email") msg="Correo inválido.";
+    else if(err.code==="auth/user-not-found") msg="Usuario no encontrado.";
+    else if(err.code==="auth/wrong-password") msg="Contraseña incorrecta.";
     errorText.textContent=msg;
   });
 });
 
-// Cerrar sesión
-logoutBtn.addEventListener('click', ()=>{
-  signOut(auth)
-  .then(()=> alert('Sesión cerrada correctamente.'))
-  .catch(err=> alert('Error al cerrar sesión: '+err.message));
+// --- REGISTRO ---
+registerForm.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('register-name').value;
+  const email = document.getElementById('register-email').value;
+  const password = document.getElementById('register-password').value;
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, { displayName: name });
+    await setDoc(doc(db, "usuarios", userCredential.user.uid), {
+      nombre: name,
+      correo: email,
+      creado: new Date().toISOString()
+    });
+    registerError.textContent='';
+    toggleModal(registerModal,false);
+    alert("Cuenta creada correctamente. Bienvenido, " + name + "!");
+  } catch (err) {
+    let msg="Error al registrarse.";
+    if(err.code==="auth/email-already-in-use") msg="Este correo ya está registrado.";
+    else if(err.code==="auth/weak-password") msg="La contraseña es muy débil.";
+    else if(err.code==="auth/invalid-email") msg="Correo inválido.";
+    registerError.textContent=msg;
+  }
 });
+
+// --- CERRAR SESIÓN ---
+logoutBtn.onclick = () => signOut(auth);
 </script>
 
 </body>
 </html>
-
