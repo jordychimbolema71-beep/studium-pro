@@ -487,6 +487,15 @@
             </div>
         </div>
     </header>
+   <section id="login-section" style="padding: 3rem 1rem; text-align: center;">
+    <h2>Iniciar Sesión</h2>
+    <form id="login-form" style="max-width: 400px; margin: auto;">
+     <input type="email" id="email" placeholder="Correo electrónico" required style="padding: 0.8rem; width: 100%; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #ccc;"><br>
+     <input type="password" id="password" placeholder="Contraseña" required style="padding: 0.8rem; width: 100%; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #ccc;"><br>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+     </form>
+     <p id="login-error" style="color: red; margin-top: 1rem;"></p>
+   </section>
 
     <!-- Hero Section -->
     <section class="hero">
@@ -741,9 +750,56 @@
             setTimeout(typeWriter, 500);
         });
     </script>
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCvcty4LZMMfxI7Ze697KbHiW_KC8jqGhg",
+    authDomain: "studiumpro-23b71.firebaseapp.com",
+    projectId: "studiumpro-23b71",
+    storageBucket: "studiumpro-23b71.firebaseapp.com",
+    messagingSenderId: "330053359753",
+    appId: "1:330053359753:web:f4fba35f48bdee1c22ce58"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  auth.languageCode = 'es'; // Forzar idioma español
+
+  document.getElementById('login-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorText = document.getElementById('login-error');
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        alert("¡Sesión iniciada como: " + user.email + "!");
+        // Aquí puedes redirigir a otra página si deseas
+      })
+      .catch((error) => {
+        let mensaje;
+        switch (error.code) {
+          case "auth/invalid-email":
+            mensaje = "Correo inválido.";
+            break;
+          case "auth/user-not-found":
+            mensaje = "Usuario no registrado.";
+            break;
+          case "auth/wrong-password":
+            mensaje = "Contraseña incorrecta.";
+            break;
+          default:
+            mensaje = "Error: " + error.message;
+        }
+        errorText.textContent = mensaje;
+      });
+  });
+</script>
+
 </body>
 </html>
-    </script>
-</body>
-</html>
+
 
